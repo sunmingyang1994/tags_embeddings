@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def getWords(file):
     words = []
     logger.info("Getting words list.")
-    with open(file, encoding='utf-8') as f:
+    with open(file, 'r', encoding='utf-8') as f:
         for line in islice(f, 1, None):
             # print(line)
             line = line.strip('\n').split(' ')
@@ -25,7 +25,7 @@ def getWords(file):
 
 def getVec(words, file):
     word2vec = {}
-    with open(file, encoding='utf-8') as f:
+    with open(file, 'r', encoding='utf-8') as f:
         for line in islice(f, 1, None):
             line = line.strip('\n').split(' ')
             if line[0] in words:
@@ -48,7 +48,7 @@ def getTags(path):
         # print(file)
         if os.path.isfile(file):
             indx = getIndex(file)
-            with open(file, encoding='utf-8') as f:
+            with open(file, 'r', encoding='utf-8') as f:
                 for line in f:
                     line = line.strip('\n').lower().split(' ')
                     if indx in tags:
@@ -58,6 +58,29 @@ def getTags(path):
                         tmp.append(line)
                         tags[indx] = tmp
     return tags
+
+def getTagVec(tags, word2vec):
+    for k, v in tags.items():
+        tag_vec = []
+        for tag in v:
+            vec = np.zeros((64))
+            if len(tag) > 1:
+                for i in range(len(tag)):
+                    if tag[i] in word2vec:
+                        vec += np.array(word2vec[tag[i]])
+            else:
+                if tag[0] in word2vec:
+                    vec += np.array(word2vec[tag[0]])
+            if not (vec == np.zeros((64))).all():
+                tag_vec.append(vec.tolist())
+        tags[k] = tag_vec
+    return tags
+
+def getMaxLength(tags):
+    max_length = 0
+    for k, v in tags.items():
+        max_length = max(max_length, len(v))
+    return max_length
 
 if __name__ == "__main__":
     tag = "mirflickr25k\mirflickr25k\mirflickr\meta\\tags_raw"
@@ -75,5 +98,14 @@ if __name__ == "__main__":
                 else:
                     nwords.append(word)
     word2vec = getVec(ywords, vec)
-    print(len(ywords))
-    print(len(nwords))
+    # print(len(ywords))
+    # print(len(nwords))
+    del words, nwords, ywords
+    tag_vec = getTagVec(tags, word2vec)
+    max_length = getMaxLength(tags)
+    del tags, word2vec
+
+    with open("./data/tags.vector", 'w', encoding='utf-8') as f:
+        for k, v in tag_vec:
+            f.write(k + ' ' + v)
+
