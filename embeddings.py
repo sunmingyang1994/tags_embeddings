@@ -5,6 +5,7 @@ import logging
 import os
 import re
 from itertools import islice
+import pickle
 
 # model = gensim.models.KeyedVectors.load_word2vec_format("./data/wiki.en.vector", binary=False)
 #
@@ -29,7 +30,7 @@ def getVec(words, file):
         for line in islice(f, 1, None):
             line = line.strip('\n').split(' ')
             if line[0] in words:
-                word2vec[line[0]] = line[1:]
+                word2vec[line[0]] = list(map(float, line[1:]))
     return word2vec
 
 def getIndex(str):
@@ -63,7 +64,7 @@ def getTagVec(tags, word2vec):
     for k, v in tags.items():
         tag_vec = []
         for tag in v:
-            vec = np.zeros((64))
+            vec = np.zeros((64,), dtype=np.float64)
             if len(tag) > 1:
                 for i in range(len(tag)):
                     if tag[i] in word2vec:
@@ -71,7 +72,7 @@ def getTagVec(tags, word2vec):
             else:
                 if tag[0] in word2vec:
                     vec += np.array(word2vec[tag[0]])
-            if not (vec == np.zeros((64))).all():
+            if not (vec == np.zeros((64,), dtype=np.float64)).all():
                 tag_vec.append(vec.tolist())
         tags[k] = tag_vec
     return tags
@@ -82,7 +83,7 @@ def getMaxLength(tags):
         max_length = max(max_length, len(v))
     return max_length
 
-if __name__ == "__main__":
+def run():
     tag = "mirflickr25k\mirflickr25k\mirflickr\meta\\tags_raw"
     vec = "data\wiki.en.vector"
     words = getWords(vec)
@@ -105,7 +106,38 @@ if __name__ == "__main__":
     max_length = getMaxLength(tags)
     del tags, word2vec
 
-    with open("./data/tags.vector", 'w', encoding='utf-8') as f:
-        for k, v in tag_vec:
-            f.write(k + ' ' + v)
+    output = open("./data/tags.vector.pkl", 'wb')
+    # for k, v in tag_vec:
+    #     f.write(k + ' ' + v)
+    pickle.dump(tag_vec, output)
+    pickle.dump(max_length, output)
+    output.close()
 
+# if __name__ == "__main__":
+#     tag = "mirflickr25k\mirflickr25k\mirflickr\meta\\tags_raw"
+#     vec = "data\wiki.en.vector"
+#     words = getWords(vec)
+#     tags = getTags(tag)
+#     ywords = []
+#     nwords = []
+#     for k in tags:
+#         # print(k)
+#         for v in tags[k]:
+#             for word in v:
+#                 if word in words:
+#                     ywords.append(word)
+#                 else:
+#                     nwords.append(word)
+#     word2vec = getVec(ywords, vec)
+#     # print(len(ywords))
+#     # print(len(nwords))
+#     del words, nwords, ywords
+#     tag_vec = getTagVec(tags, word2vec)
+#     max_length = getMaxLength(tags)
+#     del tags, word2vec
+#
+#     output = open("./data/tags.vector.pkl", 'wb')
+#         # for k, v in tag_vec:
+#         #     f.write(k + ' ' + v)
+#     pickle.dump(tag_vec, output)
+#     output.close()
